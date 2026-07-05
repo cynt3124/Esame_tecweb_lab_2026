@@ -1,0 +1,73 @@
+# Template PHP Build
+
+# This template allows you to validate your PHP application.
+# The workflow allows running tests and code linting on the default branch.
+
+image: php:8.3-fpm
+
+pipelines:
+  branches:
+    master:
+    - step:
+        name: Test Suite
+        caches:
+          - composer
+        script:
+          # Update Image
+          - apt-get update
+
+          - apt-get install -qy zlib1g-dev unzip libzip-dev libpng-dev libjpeg-dev libxml2-dev libmcrypt-dev git curl mariadb-client nodejs npm 
+          - docker-php-ext-install zip gd simplexml pdo_mysql
+          - docker-php-ext-enable zip gd simplexml pdo_mysql
+
+          # Install Composer Platform Reqs
+          - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+          - composer config --auth
+          - composer config audit.block-insecure false
+          - composer update
+
+          # Preparing Environment File
+          - cp .env.pipelines .env 
+          - ln -f -s .env .env.testing 
+
+          # Migrate and Seed Database
+          - php artisan key:generate
+          - php artisan migrate
+          - php artisan db:seed
+          
+          # Build npm 
+          - npm install
+          - npm run build
+
+          # Run Test Suite
+          - php artisan test
+          
+          # Esercitazione 1 
+          # Test sui progetti (controller + modello)
+          #- php artisan test --group=projects
+
+          # Esercitazione 2 
+          # Test sui grafici
+          #- php artisan test --group=charts
+          
+          # Esercitazione 3 
+          # Test sui grafici
+          #- php artisan test --group=ajax
+                    
+        artifacts:
+          # Produce artifacts that subsequent steps can consume
+          - .env
+          - vendor/**
+        services:
+          # Add Database
+          - mariadb
+
+definitions:
+  services:
+    mariadb:
+      image: mariadb:10.11      
+      environment:
+        MYSQL_DATABASE: 'laravel'
+        MYSQL_USER: 'laravel'
+        MYSQL_PASSWORD: 'password'
+        MYSQL_ROOT_PASSWORD: 'password'

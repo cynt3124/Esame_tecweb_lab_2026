@@ -1,0 +1,8 @@
+#page-loader {
+    transition: opacity 0.5s ease;
+}
+
+#page-loader.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
